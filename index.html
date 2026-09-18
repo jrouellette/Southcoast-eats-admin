@@ -10,8 +10,8 @@ body{font-family:system-ui;margin:0;background:#f5f7f8;color:#243746}header{back
 const URL="https://wyqbqaljjnoqypynosur.supabase.co",KEY="sb_publishable_mpZ-ZFi_MuLQYcZZh1dnHw_BQo3GGaV",API=URL+"/functions/v1/research_v2_admin_review",sb=supabase.createClient(URL,KEY);
 const esc=x=>String(x??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
 const chips=a=>(Array.isArray(a)?a:[]).map(x=>'<span class="chip">'+esc(x)+'</span>').join("")||'<span class="muted">None</span>';
-async function token(){return (await sb.auth.getSession()).data.session?.access_token||""}
-async function login(){const {error}=await sb.auth.signInWithPassword({email:email.value,password:password.value});if(error){loginError.textContent=error.message;loginError.classList.remove("hidden")}}
+async function token(){return (await supabaseClient.auth.getSession()).data.session?.access_token||""}
+async function login(){const {error}=await supabaseClient.auth.signInWithPassword({email:email.value,password:password.value});if(error){loginError.textContent=error.message;loginError.classList.remove("hidden")}}
 async function resetPassword(){
   const e=document.getElementById("email").value.trim();
   const msg=document.getElementById("loginError");
@@ -19,15 +19,15 @@ async function resetPassword(){
   if(!e){msg.textContent="Enter your email address first.";return}
   msg.textContent="Sending password reset email…";
   try{
-    const {error}=await sb.auth.resetPasswordForEmail(e,{redirectTo:"https://jrouellette.github.io/Southcoast-eats-admin/reset-password.html"});
+    const {error}=await supabaseClient.auth.resetPasswordForEmail(e,{redirectTo:"https://jrouellette.github.io/Southcoast-eats-admin/reset-password.html"});
     if(error){msg.textContent=error.message;return}
     msg.textContent="Password reset email sent. Check your inbox.";
   }catch(err){
     msg.textContent=err?.message||"Unable to send password reset email.";
   }
 }
-async function logout(){await sb.auth.signOut()}
+async function logout(){await supabaseClient.auth.signOut()}
 async function load(){const r=await fetch(API+"/api/review",{headers:{Authorization:"Bearer "+await token()}}),b=await r.json();if(!r.ok)throw Error(b.error||"Unable to load");count.textContent=" · "+(b.items||[]).length+" pending";queue.innerHTML=(b.items||[]).map(x=>{let d=x.decision,m=x.master||{},ev=x.evidence||[];return '<article class="card"><h2>'+esc(m.restaurant_name)+' <span class="muted">· '+esc(d.attribute_name)+'</span></h2><div class="row"><div class="box"><b>Current Master</b><div>'+chips(m[d.attribute_name])+'</div></div><div class="box"><b>Research Proposal · '+esc(d.confidence)+'%</b><div>'+chips(d.proposed_value).replaceAll('class="chip"','class="chip new"')+'</div></div></div><p class="muted">'+esc(d.decision_reason)+'</p><details><summary>Evidence ('+ev.length+')</summary>'+ev.map(e=>'<div class="box"><b>'+esc(e.source_name)+'</b><br><a target="_blank" href="'+esc(e.source_url)+'">'+esc(e.source_url)+'</a><p>'+esc(e.observed_value?.content||"")+'</p></div>').join("")+'</details><div><button class="approve" onclick="act(this,\''+d.attribute_decision_id+'\',\'approve\')">Approve & Apply</button><button class="reject" onclick="act(this,\''+d.attribute_decision_id+'\',\'reject\')">Reject / Keep Current</button><button class="research" onclick="act(this,\''+d.attribute_decision_id+'\',\'research\')">More Research</button></div></article>'}).join("")||'<div class="card"><h2>No items awaiting review 🎉</h2></div>'}
 async function act(btn,id,choice){btn.disabled=true;const r=await fetch(API+"/api/decision",{method:"POST",headers:{Authorization:"Bearer "+await token(),"Content-Type":"application/json"},body:JSON.stringify({attribute_decision_id:id,decision:choice})}),b=await r.json();message.innerHTML='<div class="'+(r.ok?"ok":"error")+'">'+esc(r.ok?(choice==="approve"?"Approved and applied.":choice==="reject"?"Rejected; current value retained.":"Left for more research."):b.error)+'</div>';if(r.ok)load();else btn.disabled=false}
-sb.auth.onAuthStateChange((_e,s)=>{login.classList.toggle("hidden",!!s);app.classList.toggle("hidden",!s);if(s)load().catch(e=>message.innerHTML='<div class="error">'+esc(e.message)+'</div>')});
+supabaseClient.auth.onAuthStateChange((_e,s)=>{login.classList.toggle("hidden",!!s);app.classList.toggle("hidden",!s);if(s)load().catch(e=>message.innerHTML='<div class="error">'+esc(e.message)+'</div>')});
 </script></body></html>
