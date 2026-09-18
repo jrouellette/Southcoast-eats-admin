@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SouthCoast Eats — Research Review</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{font-family:system-ui;margin:0;background:#f5f7f8;color:#243746}header{background:#17324d;color:white;padding:18px;font-weight:800}main{max-width:1000px;margin:24px auto;padding:0 16px}.card{background:white;border:1px solid #dbe3e7;border-radius:16px;padding:18px;margin:14px 0}.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.box{border:1px solid #dbe3e7;border-radius:10px;padding:12px}.chip{display:inline-block;background:#e9f1f4;border-radius:99px;padding:6px 9px;margin:3px;font-size:13px;font-weight:700}.new{background:#e6f4ef}button{border:0;border-radius:9px;padding:11px 15px;font-weight:800;margin:5px;cursor:pointer}.approve{background:#5b9b96;color:white}.reject{background:#eee}.research{background:#f3ead7}.error{background:#fff0f0;padding:10px;border-radius:9px}.ok{background:#eef8f5;padding:10px;border-radius:9px}input{display:block;width:100%;max-width:420px;padding:11px;margin:7px 0 12px;border:1px solid #ccd6dc;border-radius:9px;box-sizing:border-box}.muted{color:#6d7c87}a{color:#315f7e;word-break:break-all}.hidden{display:none}@media(max-width:700px){.row{grid-template-columns:1fr}}
+</style></head><body><header>SouthCoast Eats · Research Review</header><main>
+<section id="login" class="card"><h1>Research Review</h1><p class="muted">Sign in to review V2 attribute proposals.</p><div id="loginError" class="error hidden"></div><label>Email</label><input id="email" type="email"><label>Password</label><input id="password" type="password"><button onclick="login()">Sign in</button><p><button id="resetButton" type="button">Send Password Reset Email</button></p></section>
+<section id="app" class="hidden"><div class="card"><h1>Attribute Review Queue</h1><p class="muted">Approve applies the proposal to V2 Master. Reject keeps the current Master value. Research leaves it pending.</p><button onclick="load()">Refresh</button><button onclick="logout()">Sign out</button><span id="count" class="muted"></span><div id="message"></div></div><div id="queue"></div></section>
+</main><script>
+const URL="https://wyqbqaljjnoqypynosur.supabase.co",KEY="sb_publishable_mpZ-ZFi_MuLQYcZZh1dnHw_BQo3GGaV",API=URL+"/functions/v1/research_v2_admin_review",sb=supabase.createClient(URL,KEY);
+const esc=x=>String(x??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+const chips=a=>(Array.isArray(a)?a:[]).map(x=>'<span class="chip">'+esc(x)+'</span>').join("")||'<span class="muted">None</span>';
+async function token(){return (await sb.auth.getSession()).data.session?.access_token||""}
+async function login(){const {error}=await sb.auth.signInWithPassword({email:email.value,password:password.value});if(error){loginError.textContent=error.message;loginError.classList.remove("hidden")}}
+async function resetPassword(){
+  const e=document.getElementById("email").value.trim();
+  const msg=document.getElementById("loginError");
+  msg.classList.remove("hidden");
+  if(!e){msg.textContent="Enter your email address first.";return}
+  msg.textContent="Sending password reset email…";
+  try{
+    const {error}=await sb.auth.resetPasswordForEmail(e,{redirectTo:location.origin+"/reset-password.html"});
+    if(error){msg.textContent=error.message;return}
+    msg.textContent="Password reset email sent. Check your inbox.";
+  }catch(err){
+    msg.textContent=err?.message||"Unable to send password reset email.";
+  }
+}
+async function logout(){await sb.auth.signOut()}
+async function load(){const r=await fetch(API+"/api/review",{headers:{Authorization:"Bearer "+await token()}}),b=await r.json();if(!r.ok)throw Error(b.error||"Unable to load");count.textContent=" · "+(b.items||[]).length+" pending";queue.innerHTML=(b.items||[]).map(x=>{let d=x.decision,m=x.master||{},ev=x.evidence||[];return '<article class="card"><h2>'+esc(m.restaurant_name)+' <span class="muted">· '+esc(d.attribute_name)+'</span></h2><div class="row"><div class="box"><b>Current Master</b><div>'+chips(m[d.attribute_name])+'</div></div><div class="box"><b>Research Proposal · '+esc(d.confidence)+'%</b><div>'+chips(d.proposed_value).replaceAll('class="chip"','class="chip new"')+'</div></div></div><p class="muted">'+esc(d.decision_reason)+'</p><details><summary>Evidence ('+ev.length+')</summary>'+ev.map(e=>'<div class="box"><b>'+esc(e.source_name)+'</b><br><a target="_blank" href="'+esc(e.source_url)+'">'+esc(e.source_url)+'</a><p>'+esc(e.observed_value?.content||"")+'</p></div>').join("")+'</details><div><button class="approve" onclick="act(this,\''+d.attribute_decision_id+'\',\'approve\')">Approve & Apply</button><button class="reject" onclick="act(this,\''+d.attribute_decision_id+'\',\'reject\')">Reject / Keep Current</button><button class="research" onclick="act(this,\''+d.attribute_decision_id+'\',\'research\')">More Research</button></div></article>'}).join("")||'<div class="card"><h2>No items awaiting review 🎉</h2></div>'}
+async function act(btn,id,choice){btn.disabled=true;const r=await fetch(API+"/api/decision",{method:"POST",headers:{Authorization:"Bearer "+await token(),"Content-Type":"application/json"},body:JSON.stringify({attribute_decision_id:id,decision:choice})}),b=await r.json();message.innerHTML='<div class="'+(r.ok?"ok":"error")+'">'+esc(r.ok?(choice==="approve"?"Approved and applied.":choice==="reject"?"Rejected; current value retained.":"Left for more research."):b.error)+'</div>';if(r.ok)load();else btn.disabled=false}
+sb.auth.onAuthStateChange((_e,s)=>{login.classList.toggle("hidden",!!s);app.classList.toggle("hidden",!s);if(s)load().catch(e=>message.innerHTML='<div class="error">'+esc(e.message)+'</div>')});
+</script></body></html>
