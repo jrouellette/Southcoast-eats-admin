@@ -19,7 +19,7 @@ async function resetPassword(){
   if(!e){msg.textContent="Enter your email address first.";return}
   msg.textContent="Sending password reset email…";
   try{
-    const {error}=await sb.auth.resetPasswordForEmail(e,{redirectTo:location.origin+"/reset-password.html"});
+    const {error}=await sb.auth.resetPasswordForEmail(e,{redirectTo:"https://jrouellette.github.io/Southcoast-eats-admin/reset-password.html"});
     if(error){msg.textContent=error.message;return}
     msg.textContent="Password reset email sent. Check your inbox.";
   }catch(err){
@@ -29,5 +29,6 @@ async function resetPassword(){
 async function logout(){await sb.auth.signOut()}
 async function load(){const r=await fetch(API+"/api/review",{headers:{Authorization:"Bearer "+await token()}}),b=await r.json();if(!r.ok)throw Error(b.error||"Unable to load");count.textContent=" · "+(b.items||[]).length+" pending";queue.innerHTML=(b.items||[]).map(x=>{let d=x.decision,m=x.master||{},ev=x.evidence||[];return '<article class="card"><h2>'+esc(m.restaurant_name)+' <span class="muted">· '+esc(d.attribute_name)+'</span></h2><div class="row"><div class="box"><b>Current Master</b><div>'+chips(m[d.attribute_name])+'</div></div><div class="box"><b>Research Proposal · '+esc(d.confidence)+'%</b><div>'+chips(d.proposed_value).replaceAll('class="chip"','class="chip new"')+'</div></div></div><p class="muted">'+esc(d.decision_reason)+'</p><details><summary>Evidence ('+ev.length+')</summary>'+ev.map(e=>'<div class="box"><b>'+esc(e.source_name)+'</b><br><a target="_blank" href="'+esc(e.source_url)+'">'+esc(e.source_url)+'</a><p>'+esc(e.observed_value?.content||"")+'</p></div>').join("")+'</details><div><button class="approve" onclick="act(this,\''+d.attribute_decision_id+'\',\'approve\')">Approve & Apply</button><button class="reject" onclick="act(this,\''+d.attribute_decision_id+'\',\'reject\')">Reject / Keep Current</button><button class="research" onclick="act(this,\''+d.attribute_decision_id+'\',\'research\')">More Research</button></div></article>'}).join("")||'<div class="card"><h2>No items awaiting review 🎉</h2></div>'}
 async function act(btn,id,choice){btn.disabled=true;const r=await fetch(API+"/api/decision",{method:"POST",headers:{Authorization:"Bearer "+await token(),"Content-Type":"application/json"},body:JSON.stringify({attribute_decision_id:id,decision:choice})}),b=await r.json();message.innerHTML='<div class="'+(r.ok?"ok":"error")+'">'+esc(r.ok?(choice==="approve"?"Approved and applied.":choice==="reject"?"Rejected; current value retained.":"Left for more research."):b.error)+'</div>';if(r.ok)load();else btn.disabled=false}
+document.getElementById("resetButton").addEventListener("click",resetPassword);
 sb.auth.onAuthStateChange((_e,s)=>{login.classList.toggle("hidden",!!s);app.classList.toggle("hidden",!s);if(s)load().catch(e=>message.innerHTML='<div class="error">'+esc(e.message)+'</div>')});
 </script></body></html>
