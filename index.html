@@ -7,7 +7,7 @@ body{font-family:system-ui;margin:0;background:#f5f7f8;color:#243746}header{back
 <section id="login" class="card"><h1>Research Review</h1><p class="muted">Sign in to review V2 attribute proposals.</p><div id="loginError" class="error hidden"></div><label>Email</label><input id="email" type="email"><label>Password</label><input id="password" type="password"><button onclick="login()">Sign in</button><p><button type="button" onclick="resetPassword()">Send Password Reset Email</button></p></section>
 <section id="app" class="hidden"><div class="card"><h1>Attribute Review Queue</h1><p class="muted">Approve applies the proposal to V2 Master. Reject keeps the current Master value. Research leaves it pending.</p><button onclick="load()">Refresh</button><button onclick="logout()">Sign out</button><span id="count" class="muted"></span><div id="message"></div></div><div id="queue"></div></section>
 </main><script>
-var SCE_SUPABASE_URL="https://wyqbqaljjnoqypynosur.supabase.co",SCE_SUPABASE_KEY="sb_publishable_mpZ-ZFi_MuLQYcZZh1dnHw_BQo3GGaV",API=SCE_SUPABASE_URL+"/functions/v1/research_v2_admin_review"; var sb=window.supabase.createClient(SCE_SUPABASE_URL,SCE_SUPABASE_KEY);
+const URL="https://wyqbqaljjnoqypynosur.supabase.co",KEY="sb_publishable_mpZ-ZFi_MuLQYcZZh1dnHw_BQo3GGaV",API=URL+"/functions/v1/research_v2_admin_review",sb=supabase.createClient(URL,KEY);
 const esc=x=>String(x??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
 const chips=a=>(Array.isArray(a)?a:[]).map(x=>'<span class="chip">'+esc(x)+'</span>').join("")||'<span class="muted">None</span>';
 async function token(){return (await sb.auth.getSession()).data.session?.access_token||""}
@@ -19,7 +19,7 @@ async function resetPassword(){
   if(!e){msg.textContent="Enter your email address first.";return}
   msg.textContent="Sending password reset email…";
   try{
-    const {error}=await sb.auth.resetPasswordForEmail(e,{redirectTo:location.origin+"/reset-password.html"});
+    const {error}=await sb.auth.resetPasswordForEmail(e,{redirectTo:"https://jrouellette.github.io/Southcoast-eats-admin/reset-password.html"});
     if(error){msg.textContent=error.message;return}
     msg.textContent="Password reset email sent. Check your inbox.";
   }catch(err){
