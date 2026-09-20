@@ -1,0 +1,6 @@
+SouthCoast Eats Admin Review — Identity Review v4
+
+Adds pending identity decisions to the admin review queue.
+Identity approval calls the V4 review API and creates the V2 Master record.
+Attribute review remains supported.
+No consumer app changes.
